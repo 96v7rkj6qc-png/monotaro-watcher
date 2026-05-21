@@ -1,0 +1,25 @@
+name: MonotaRO 在庫チェック
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # 10分ごと（UTC）
+  workflow_dispatch:          # 手動実行ボタン
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 依存パッケージインストール
+        run: pip install requests beautifulsoup4
+
+      - name: 在庫チェック実行
+        env:
+          PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+          PUSHOVER_USER:  ${{ secrets.PUSHOVER_USER }}
+        run: python check_stock.py
