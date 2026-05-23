@@ -1,6 +1,5 @@
 import os
 import requests
-from bs4 import BeautifulSoup
 import time
 
 # ── 監視対象 ──────────────────────────────────────────────
@@ -40,10 +39,10 @@ def check_stock(url: str) -> tuple[bool, str]:
     resp = requests.get(url, headers=HEADERS, timeout=15)
     resp.raise_for_status()
 
-    if "schema.org/InStock" in resp.text:
-        return True, "schema.org/InStock"
     if "schema.org/OutOfStock" in resp.text:
         return False, "schema.org/OutOfStock"
+    if "schema.org/InStock" in resp.text:
+        return True, "schema.org/InStock"
 
     return False, "判定不明（在庫なしとして扱う）"
 
@@ -53,13 +52,13 @@ def notify(title: str, message: str, url: str):
     requests.post(
         "https://api.pushover.net/1/messages.json",
         data={
-            "token":   PUSHOVER_TOKEN,
-            "user":    PUSHOVER_USER,
-            "title":   title,
-            "message": message,
-            "url":     url,
+            "token":     PUSHOVER_TOKEN,
+            "user":      PUSHOVER_USER,
+            "title":     title,
+            "message":   message,
+            "url":       url,
             "url_title": "MonotaROで開く",
-            "priority": 1,   # 高優先度（バイブあり）
+            "priority":  1,
         },
         timeout=10,
     )
@@ -71,7 +70,7 @@ def main():
     found_any = False
 
     for product in PRODUCTS:
-        time.sleep(2)  # サーバー負荷軽減
+        time.sleep(2)
         try:
             in_stock, reason = check_stock(product["url"])
             status = "✅ 在庫あり" if in_stock else "❌ 在庫なし"
