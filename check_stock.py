@@ -70,6 +70,13 @@ def check_stock(url: str) -> tuple[bool, str]:
             if idx >= 0:
                 print(f"[{kw}] ...{resp.text[max(0,idx-30):idx+50]}...")
         print("--- ここまで ---")
+        # デバッグ：HTML断片を出力
+        print("--- HTML断片（デバッグ） ---")
+        for kw in ["品切れ", "カート", "在庫", "stock", "cart", "sold"]:
+            idx = resp.text.lower().find(kw.lower())
+            if idx >= 0:
+                print(f"[{kw}] ...{resp.text[max(0,idx-30):idx+50]}...")
+        print("--- ここまで ---")
     return False, "判定不明（在庫なしとして扱う）"
 
 
