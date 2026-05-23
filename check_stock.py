@@ -37,46 +37,14 @@ HEADERS = {
 
 # ── 在庫判定 ──────────────────────────────────────────────
 def check_stock(url: str) -> tuple[bool, str]:
-    """
-    戻り値: (在庫あり=True, 判定根拠テキスト)
-    """
     resp = requests.get(url, headers=HEADERS, timeout=15)
     resp.raise_for_status()
-    soup = BeautifulSoup(resp.text, "html.parser")
 
-    # ① カートボタン（在庫あり）
-    cart_btn = soup.find("button", string=lambda t: t and "カートに入れる" in t)
-    if cart_btn:
-        disabled = cart_btn.get("disabled")
-        if disabled is None:
-            return True, "カートに入れるボタンが有効"
+    if "schema.org/InStock" in resp.text:
+        return True, "schema.org/InStock"
+    if "schema.org/OutOfStock" in resp.text:
+        return False, "schema.org/OutOfStock"
 
-    # ② 品切れテキスト（在庫なし）
-    out_keywords = ["品切れ", "在庫なし", "入荷待ち", "販売終了"]
-    for kw in out_keywords:
-        if kw in resp.text:
-            return False, kw
-
-    # ③ 在庫数テキスト（在庫あり）
-    in_keywords = ["在庫あり", "在庫：", "即日出荷"]
-    for kw in in_keywords:
-        if kw in resp.text:
-            return True, kw
-    
-        # デバッグ：HTML断片を出力
-        print("--- HTML断片（デバッグ） ---")
-        for kw in ["品切れ", "カート", "在庫", "stock", "cart", "sold"]:
-            idx = resp.text.lower().find(kw.lower())
-            if idx >= 0:
-                print(f"[{kw}] ...{resp.text[max(0,idx-30):idx+50]}...")
-        print("--- ここまで ---")
-        # デバッグ：HTML断片を出力
-        print("--- HTML断片（デバッグ） ---")
-        for kw in ["品切れ", "カート", "在庫", "stock", "cart", "sold"]:
-            idx = resp.text.lower().find(kw.lower())
-            if idx >= 0:
-                print(f"[{kw}] ...{resp.text[max(0,idx-30):idx+50]}...")
-        print("--- ここまで ---")
     return False, "判定不明（在庫なしとして扱う）"
 
 
