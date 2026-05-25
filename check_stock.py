@@ -3,14 +3,7 @@ import time
 import json
 import requests
 
-PRODUCTS = [
-    {"name": "CD-30 農機用ディーゼルオイル 4L", "url": "https://www.monotaro.com/p/0537/2377/"},
-    {"name": "CD-30 農機用ディーゼルオイル 20L", "url": "https://www.monotaro.com/p/0537/2386/"},
-    {"name": "EP-2Kカートリッジグリース 400g×1本", "url": "https://www.monotaro.com/p/7019/1845/"},
-    {"name": "EP-2Kカートリッジグリース 400g×20本", "url": "https://www.monotaro.com/p/7026/3306/"},
-    {"name": "テスト商品 在庫あり確認用", "url": "https://www.monotaro.com/p/5504/9366/"},
-]
-
+PRODUCTS_FILE = "products.json"
 STATE_FILE = "stock_state.json"
 
 PUSHOVER_TOKEN = os.environ["PUSHOVER_TOKEN"]
@@ -24,6 +17,23 @@ HEADERS = {
     ),
     "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
 }
+
+
+def load_products() -> list[dict]:
+    if not os.path.exists(PRODUCTS_FILE):
+        raise FileNotFoundError(f"{PRODUCTS_FILE} が見つかりません")
+
+    with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
+        products = json.load(f)
+
+    if not isinstance(products, list):
+        raise ValueError(f"{PRODUCTS_FILE} は配列形式にしてください")
+
+    for product in products:
+        if "name" not in product or "url" not in product:
+            raise ValueError("各商品には name と url が必要です")
+
+    return products
 
 
 def load_state() -> dict:
@@ -43,14 +53,13 @@ def check_stock(url: str) -> tuple[bool, str]:
     resp = requests.get(url, headers=HEADERS, timeout=15)
     resp.raise_for_status()
 
-    # 重要：日本語判定が文字化けしないようにUTF-8で読む
     html = resp.content.decode("utf-8", errors="replace")
 
-    # 注文不可文言を最優先
     ng_words = [
         "取扱停止中",
         "販売終了",
         "取扱い終了",
+        "取扱終了",
         "お取り扱いを終了",
         "現在ご注文頂けません",
         "現在ご注文いただけません",
@@ -69,16 +78,12 @@ def check_stock(url: str) -> tuple[bool, str]:
     if "schema.org/OutOfStock" in html:
         return False, "schema.org/OutOfStock"
 
-    # MonotaROの実在庫あり商品には「在庫数量」が出やすい
     if "在庫数量" in html:
         return True, "在庫数量あり"
 
-    # 商品本体の購入ボタンは「バスケットに入れる」
-    # 「バスケットへ」はおすすめ商品の文言にも出るので使わない
     if "バスケットに入れる" in html:
         return True, "バスケットに入れる"
 
-    # schema.org/InStock だけでは、取扱停止品でも出る場合があるので信用しない
     if "schema.org/InStock" in html:
         return False, "schema.org/InStockのみ検出・注文可否不明"
 
@@ -105,12 +110,15 @@ def notify(title: str, message: str, url: str) -> None:
 def main() -> None:
     print("MonotaRO 在庫チェック開始")
 
+    products = load_products()
     previous_state = load_state()
     current_state = {}
 
     notified_any = False
 
-    for product in PRODUCTS:
+    print(f"監視商品数: {len(products)}件")
+
+    for product in products:
         time.sleep(2)
 
         name = product["name"]
