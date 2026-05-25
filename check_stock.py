@@ -21,7 +21,8 @@ HEADERS = {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/124.0.0.0 Safari/537.36"
-    )
+    ),
+    "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
 }
 
 
@@ -42,10 +43,10 @@ def check_stock(url: str) -> tuple[bool, str]:
     resp = requests.get(url, headers=HEADERS, timeout=15)
     resp.raise_for_status()
 
-    html = resp.text
+    # 重要：日本語判定が文字化けしないようにUTF-8で読む
+    html = resp.content.decode("utf-8", errors="replace")
 
-    # MonotaROでは schema.org/InStock があっても、
-    # 取扱停止や注文不可の文言がある場合があるため、先に除外する
+    # 注文不可文言を最優先
     ng_words = [
         "取扱停止中",
         "販売終了",
@@ -68,8 +69,18 @@ def check_stock(url: str) -> tuple[bool, str]:
     if "schema.org/OutOfStock" in html:
         return False, "schema.org/OutOfStock"
 
+    # MonotaROの実在庫あり商品には「在庫数量」が出やすい
+    if "在庫数量" in html:
+        return True, "在庫数量あり"
+
+    # 商品本体の購入ボタンは「バスケットに入れる」
+    # 「バスケットへ」はおすすめ商品の文言にも出るので使わない
+    if "バスケットに入れる" in html:
+        return True, "バスケットに入れる"
+
+    # schema.org/InStock だけでは、取扱停止品でも出る場合があるので信用しない
     if "schema.org/InStock" in html:
-        return True, "schema.org/InStock"
+        return False, "schema.org/InStockのみ検出・注文可否不明"
 
     return False, "判定不明（在庫なしとして扱う）"
 
