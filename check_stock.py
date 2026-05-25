@@ -9,7 +9,7 @@ PRODUCTS = [
     {"name": "EP-2Kカートリッジグリース 400g×1本", "url": "https://www.monotaro.com/p/7019/1845/"},
     {"name": "EP-2Kカートリッジグリース 400g×20本", "url": "https://www.monotaro.com/p/7026/3306/"},
 ]
- 
+
 STATE_FILE = "stock_state.json"
 
 PUSHOVER_TOKEN = os.environ["PUSHOVER_TOKEN"]
@@ -43,11 +43,46 @@ def check_stock(url: str) -> tuple[bool, str]:
 
     html = resp.text
 
+    # MonotaROは schema.org/InStock があっても、
+    # 実際には注文できない場合があるため、注文不可文言を優先する
+    ng_words = [
+        "販売終了",
+        "取扱い終了",
+        "お取り扱いを終了",
+        "現在お取り扱いできません",
+        "注文できません",
+        "カートに入れることができません",
+        "入荷予定はありません",
+        "欠品中",
+        "在庫切れ",
+        "在庫なし",
+        "一時的に在庫切れ",
+        "現在、在庫切れです",
+        "ご注文いただけません",
+    ]
+
+    for word in ng_words:
+        if word in html:
+            return False, f"注文不可文言: {word}"
+
+    # schema.org上で明確にOutOfStockなら在庫なし
     if "schema.org/OutOfStock" in html:
         return False, "schema.org/OutOfStock"
 
+    # schema.org/InStock だけでは信用しない
+    # 実際にカート投入系の文言がある場合だけ在庫あり扱い
+    cart_words = [
+        "カートに入れる",
+        "バスケットに入れる",
+        "買い物かごに入れる",
+    ]
+
     if "schema.org/InStock" in html:
-        return True, "schema.org/InStock"
+        for word in cart_words:
+            if word in html:
+                return True, f"schema.org/InStock + {word}"
+
+        return False, "schema.org/InStockだがカート投入文言なし"
 
     return False, "判定不明（在庫なしとして扱う）"
 
@@ -107,7 +142,7 @@ def main() -> None:
 
                 notify(
                     title=f"🛒 在庫復活: {name}",
-                    message=f"MonotaROに在庫が入りました。\n判定: {reason}",
+                    message=f"MonotaROで注文できる可能性があります。\n判定: {reason}",
                     url=url,
                 )
 
