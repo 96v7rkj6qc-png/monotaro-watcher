@@ -2,12 +2,16 @@ name: MonotaRO 在庫チェック
 
 on:
   schedule:
-    - cron: "*/10 * * * *"   # 10分ごと（UTC）
-  workflow_dispatch:          # 手動実行ボタン
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   check:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -16,10 +20,18 @@ jobs:
           python-version: "3.12"
 
       - name: 依存パッケージインストール
-        run: pip install requests beautifulsoup4
+        run: pip install requests
 
       - name: 在庫チェック実行
         env:
           PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
-          PUSHOVER_USER:  ${{ secrets.PUSHOVER_USER }}
+          PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
         run: python check_stock.py
+
+      - name: 状態ファイルを保存
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add stock_state.json
+          git diff --cached --quiet || git commit -m "Update stock state"
+          git push
