@@ -21,7 +21,7 @@
   },
   "https://www.monotaro.com/p/5504/9366/": {
     "name": "テスト商品 在庫あり確認用",
-    "in_stock": false,
-    "reason": "schema.org/InStockだがカート投入文言なし"
+    "in_stock": true,
+    "reason": "在庫数量あり"
   }
 }
