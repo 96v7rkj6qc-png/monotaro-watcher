@@ -8,7 +8,7 @@ PRODUCTS = [
     {"name": "CD-30 農機用ディーゼルオイル 20L", "url": "https://www.monotaro.com/p/0537/2386/"},
     {"name": "EP-2Kカートリッジグリース 400g×1本", "url": "https://www.monotaro.com/p/7019/1845/"},
     {"name": "EP-2Kカートリッジグリース 400g×20本", "url": "https://www.monotaro.com/p/7026/3306/"},
-     {"name": "テスト商品 在庫あり確認用", "url": "https://www.monotaro.com/p/5504/9366/"},
+    {"name": "テスト商品 在庫あり確認用", "url": "https://www.monotaro.com/p/5504/9366/"},
 ]
 
 STATE_FILE = "stock_state.json"
@@ -44,46 +44,32 @@ def check_stock(url: str) -> tuple[bool, str]:
 
     html = resp.text
 
-    # MonotaROは schema.org/InStock があっても、
-    # 実際には注文できない場合があるため、注文不可文言を優先する
+    # MonotaROでは schema.org/InStock があっても、
+    # 取扱停止や注文不可の文言がある場合があるため、先に除外する
     ng_words = [
+        "取扱停止中",
         "販売終了",
         "取扱い終了",
         "お取り扱いを終了",
+        "現在ご注文頂けません",
+        "現在ご注文いただけません",
+        "ご注文頂けません",
+        "ご注文いただけません",
         "現在お取り扱いできません",
         "注文できません",
         "カートに入れることができません",
         "入荷予定はありません",
-        "欠品中",
-        "在庫切れ",
-        "在庫なし",
-        "一時的に在庫切れ",
-        "現在、在庫切れです",
-        "ご注文いただけません",
     ]
 
     for word in ng_words:
         if word in html:
             return False, f"注文不可文言: {word}"
 
-    # schema.org上で明確にOutOfStockなら在庫なし
     if "schema.org/OutOfStock" in html:
         return False, "schema.org/OutOfStock"
 
-    # schema.org/InStock だけでは信用しない
-    # 実際にカート投入系の文言がある場合だけ在庫あり扱い
-    cart_words = [
-        "カートに入れる",
-        "バスケットに入れる",
-        "買い物かごに入れる",
-    ]
-
     if "schema.org/InStock" in html:
-        for word in cart_words:
-            if word in html:
-                return True, f"schema.org/InStock + {word}"
-
-        return False, "schema.org/InStockだがカート投入文言なし"
+        return True, "schema.org/InStock"
 
     return False, "判定不明（在庫なしとして扱う）"
 
