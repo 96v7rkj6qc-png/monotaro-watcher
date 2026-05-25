@@ -1,5 +1,6 @@
 import os
 import time
+import json
 import requests
 
 PRODUCTS = [
@@ -8,6 +9,8 @@ PRODUCTS = [
     {"name": "EP-2Kカートリッジグリース 400g×1本", "url": "https://www.monotaro.com/p/7019/1845/"},
     {"name": "EP-2Kカートリッジグリース 400g×20本", "url": "https://www.monotaro.com/p/7026/3306/"},
 ]
+
+STATE_FILE = "stock_state.json"
 
 PUSHOVER_TOKEN = os.environ["PUSHOVER_TOKEN"]
 PUSHOVER_USER = os.environ["PUSHOVER_USER"]
@@ -19,6 +22,19 @@ HEADERS = {
         "Chrome/124.0.0.0 Safari/537.36"
     )
 }
+
+
+def load_state() -> dict:
+    if not os.path.exists(STATE_FILE):
+        return {}
+
+    with open(STATE_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_state(state: dict) -> None:
+    with open(STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(state, f, ensure_ascii=False, indent=2)
 
 
 def check_stock(url: str) -> tuple[bool, str]:
@@ -56,30 +72,67 @@ def notify(title: str, message: str, url: str) -> None:
 def main() -> None:
     print("MonotaRO 在庫チェック開始")
 
-    found_any = False
+    previous_state = load_state()
+    current_state = {}
+
+    notified_any = False
 
     for product in PRODUCTS:
         time.sleep(2)
 
+        name = product["name"]
+        url = product["url"]
+
         try:
-            in_stock, reason = check_stock(product["url"])
+            in_stock, reason = check_stock(url)
+
+            current_state[url] = {
+                "name": name,
+                "in_stock": in_stock,
+                "reason": reason,
+            }
+
             status = "✅ 在庫あり" if in_stock else "❌ 在庫なし"
+            print(f"{status} | {name} | {reason}")
 
-            print(f"{status} | {product['name']} | {reason}")
+            previous = previous_state.get(url)
+            previous_in_stock = previous.get("in_stock") if previous else None
 
-            if in_stock:
-                found_any = True
+            if previous_in_stock is None:
+                print(f"初回記録のみ | {name} | 通知なし")
+
+            elif previous_in_stock is False and in_stock is True:
+                notified_any = True
+                print(f"通知対象 | {name} | 在庫なし → 在庫あり")
+
                 notify(
-                    title=f"🛒 在庫復活: {product['name']}",
+                    title=f"🛒 在庫復活: {name}",
                     message=f"MonotaROに在庫が入りました。\n判定: {reason}",
-                    url=product["url"],
+                    url=url,
                 )
 
-        except Exception as e:
-            print(f"エラー: {product['name']} → {e}")
+            elif previous_in_stock is True and in_stock is True:
+                print(f"通知なし | {name} | 前回も在庫あり")
 
-    if not found_any:
-        print("在庫ありの商品なし。通知なし。")
+            elif previous_in_stock is True and in_stock is False:
+                print(f"在庫切れに変化 | {name} | 在庫あり → 在庫なし")
+
+            else:
+                print(f"通知なし | {name} | 前回も在庫なし")
+
+        except Exception as e:
+            print(f"エラー: {name} → {e}")
+
+            current_state[url] = previous_state.get(url, {
+                "name": name,
+                "in_stock": False,
+                "reason": f"エラー: {e}",
+            })
+
+    save_state(current_state)
+
+    if not notified_any:
+        print("今回通知する商品なし。")
 
 
 if __name__ == "__main__":
