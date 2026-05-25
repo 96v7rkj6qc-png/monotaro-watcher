@@ -9,7 +9,7 @@ PRODUCTS = [
     {"name": "EP-2Kカートリッジグリース 400g×1本", "url": "https://www.monotaro.com/p/7019/1845/"},
     {"name": "EP-2Kカートリッジグリース 400g×20本", "url": "https://www.monotaro.com/p/7026/3306/"},
 ]
-
+ 
 STATE_FILE = "stock_state.json"
 
 PUSHOVER_TOKEN = os.environ["PUSHOVER_TOKEN"]
