@@ -8,6 +8,7 @@ PRODUCTS = [
     {"name": "CD-30 農機用ディーゼルオイル 20L", "url": "https://www.monotaro.com/p/0537/2386/"},
     {"name": "EP-2Kカートリッジグリース 400g×1本", "url": "https://www.monotaro.com/p/7019/1845/"},
     {"name": "EP-2Kカートリッジグリース 400g×20本", "url": "https://www.monotaro.com/p/7026/3306/"},
+     {"name": "テスト商品 在庫あり確認用", "url": "https://www.monotaro.com/p/5504/9366/"},
 ]
 
 STATE_FILE = "stock_state.json"
