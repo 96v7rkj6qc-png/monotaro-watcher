@@ -1,8 +1,8 @@
 {
   "https://www.monotaro.com/p/0537/2377/": {
     "name": "CD-30 農機用ディーゼルオイル 4L",
-    "in_stock": true,
-    "reason": "在庫数量あり"
+    "in_stock": false,
+    "reason": "注文不可文言: 取扱停止中"
   },
   "https://www.monotaro.com/p/0537/2386/": {
     "name": "CD-30 農機用ディーゼルオイル 20L",
