@@ -11,8 +11,8 @@
   },
   "https://www.monotaro.com/p/7019/1845/": {
     "name": "EP-2Kカートリッジグリース 400g×1本",
-    "in_stock": true,
-    "reason": "在庫数量あり"
+    "in_stock": false,
+    "reason": "schema.org/InStockのみ検出・注文可否不明"
   },
   "https://www.monotaro.com/p/7026/3306/": {
     "name": "EP-2Kカートリッジグリース 400g×20本",
